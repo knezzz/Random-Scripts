@@ -1,5 +1,6 @@
 #!/usr/bin/env lua
 
+-- .adbplus.lua is required for this script
 -- Rewrite of my sleep.sh command to LUA
 
 local sh = require('sh')
