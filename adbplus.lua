@@ -4,7 +4,7 @@
 
 sh = require('sh')
 
-local adbCommand = ''
+local adbCommand = nil
 
 function showHelp()
 	print('Usage: adb+ [-a] <command>')
@@ -19,7 +19,11 @@ end
 
 function getAllArguments(i)
 	for count = i, #arg do
-		adbCommand = adbCommand .. arg[count] .. ' '
+		if adbCommand == nil then
+			adbCommand = arg[count]
+		else
+			adbCommand = adbCommand .. ' ' .. arg[count]
+		end
 	end
 end
 
@@ -48,11 +52,7 @@ function runOnAllDevices()
 		local deviceSerialNumber = awk(echo(connectedDevices[deviceCount]), "'{print $1}'").__input
 		local command = string.gsub('-s ' .. deviceSerialNumber .. ' ' .. adbCommand,'\n', '')
 
-		local infoMess = string.gsub('Calling command on ' .. awk(echo(connectedDevices[deviceCount]), "'{print $3}'").__input,'\n','')local infoMess = ''
-		isGoingToSleep = string.find(adbCommand, 'input keyevent 26')
-		if isGoingToSleep ~= nil then
-			infoMess = string.gsub('Putting ' .. awk(echo(connectedDevices[deviceCount]), "'{print $3}'").__input .. ' to sleep.','\n','')
-		end		
+		local infoMess = string.gsub('Executing command \'' .. adbCommand .. '\' on ' .. awk(echo(connectedDevices[deviceCount]), "'{print $3}'").__input,'\n','')
 		print(infoMess)
 
 		result = adb(command)
@@ -71,11 +71,16 @@ for line in magiclines(devices) do
 	end
 end
 
+if #connectedDevices == 0 then
+	print('No devices connected to adb')
+	os.exit()
+end
+
 -- If just one device is connected then call adb with all arguments
 if #connectedDevices == 1 then
 	print('Just one device connected!\nForwarding commands to adb!\n')
 	adbCommand = string.gsub(adbCommand, '-a', '')
-	local infoMess = string.gsub('Calling command on ' .. awk(echo(connectedDevices[#connectedDevices]), "'{print $3}'").__input,'\n','')
+	local infoMess = string.gsub('Executing command \'' .. adbCommand .. '\' on ' .. awk(echo(connectedDevices[#connectedDevices]), "'{print $3}'").__input,'\n','')
 	print(infoMess)
 	result = adb(adbCommand)
 	if(result.__input ~= nil and result.__input ~= '') then
@@ -111,11 +116,7 @@ if input == #connectedDevices then
 	table.remove(connectedDevices)
 	runOnAllDevices()
 else
-	local infoMess = string.gsub('Calling command on ' .. awk(echo(connectedDevices[input]), "'{print $3}'").__input,'\n','')
-	isGoingToSleep = string.find(adbCommand, 'input keyevent 26')
-	if isGoingToSleep ~= nil then
-		infoMess = string.gsub('Putting ' .. awk(echo(connectedDevices[input]), "'{print $3}'").__input .. ' to sleep.','\n','')
-	end
+	local infoMess = string.gsub('Executing command \'' .. adbCommand .. '\' on ' .. awk(echo(connectedDevices[input]), "'{print $3}'").__input,'\n','')
 	print(infoMess)
 	local deviceSerialNumber = awk(echo(connectedDevices[input]), "'{print $1}'").__input
 	local command = string.gsub('-s ' .. deviceSerialNumber .. ' ' .. adbCommand,'\n', '')
